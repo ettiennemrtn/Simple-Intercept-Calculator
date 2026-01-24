@@ -1,0 +1,135 @@
+import math
+from time import sleep
+import json
+
+    #initialise world boundaries
+canvasY = 30000
+canvasX = 40000
+
+    #ask input prefs
+prefs = int(input("Enter 1 to open a JSON or 2 to enter raw data:"))
+
+if prefs == 1:
+        #ask for file input
+    file = input('Input file name:')
+    if len(file) < 1:
+        file = 'dataDefault.json'
+    try:
+        fileRead = open(file, 'r')
+    except:
+        print("File opening failed")
+        exit()
+    data = json.load(fileRead)
+    redforV = float(data['redfor']['speed_mps'])
+    redforAltInit = float(data['redfor']['altitude_m'])
+    redforXInit = float(data['redfor']['x_position_m'])
+
+    bluforV = float(data['blufor']['speed_mps'])
+    bluforAltInit = float(data['blufor']['altitude_m'])
+    bluforXInit = float(data['blufor']['x_position_m'])
+
+    missileV = float(data['missile']['speed_mps'])
+
+if prefs == 2:
+        # initialise redfor's physics
+    redforV = input("input redfor's speed in m/s:")
+    try: redforV = float(redforV)
+    except:
+        print("redfor's speed must be a number.")
+
+    redforAltInit = input("input redfor's altitude in metres:")
+    try: redforAltInit = float(redforAltInit)
+    except:
+        print("redfor's altitude must be a number.")
+    if redforAltInit > 30000 or redforAltInit < 0:
+        print("redfor's alt must be between 0 and 30000 metres.")
+
+    redforXInit = input("input redfor's X position in metres:")
+    try: redforXInit = float(redforXInit)
+    except:
+        print("redfor's X position must be a number.")
+    if redforXInit > 40000 or redforXInit < 0:
+        print("redfor's X position musy be between 0 and 40000 metres.")
+
+        #initialise blufor's physics
+
+    bluforV = input("input blufor's speed in m/s:")
+    try: bluforV = float(bluforV)
+    except:
+        print("blufor's speed must be a number.")
+
+    bluforAltInit = input("input blufor's altitude in metres:")
+    try: bluforAltInit = float(bluforAltInit)
+    except:
+        print("blufor's altitude must be a number.")
+    if bluforAltInit > 30000 or bluforAltInit < 0:
+        print("bluefor's altitude must be between 0 and 30000 metres.")
+
+    bluforXInit = input("input blufor's X position in metres:")
+    try: bluforXInit = float(bluforXInit)
+    except:
+        print("blufor's X position must be a number.")
+    if bluforXInit > 40000 or bluforXInit < 0:
+        print("blufor's X position must be between 0 and 40000 metres.")
+
+        #initialise missile physics
+    missileV = input("input missile's speed in m/s")
+    try: missileV = float(missileV)
+    except:
+        print("missile's speed must be a number")
+
+    #flight
+redforAlt = redforAltInit
+bluforAlt = bluforAltInit
+redforX = redforXInit
+bluforX = bluforXInit
+
+missileAlt = bluforAlt
+missileX = bluforX
+
+
+dx = redforX - missileX
+dy = redforAlt - missileAlt
+missileDistance = math.hypot(dx, dy)
+
+def distanceCalc():
+    dx = redforX - bluforX
+    dy = redforAlt - bluforAlt
+    airDistance = math.hypot(dx, dy)
+    return airDistance
+
+def missileCalc():
+    dx = redforX - missileX
+    dy = redforAlt - missileAlt
+    missileDistance = math.hypot(dx, dy)
+    return missileDistance
+
+
+    #missile flight
+oldMissileDistance = missileDistance
+while missileDistance > 50:
+
+    uX = (redforX - missileX) / missileDistance
+    uY = (redforAlt - missileAlt) / missileDistance
+    redforX = redforX - (redforV * 0.01)
+    missileX = missileX + (missileV * uX * 0.01)
+    missileAlt = missileAlt + (missileV * uY * 0.01)
+    missileDistance = missileCalc()
+
+
+
+    if oldMissileDistance < missileDistance:
+        print("Missile has lost lock")
+        end()
+    oldMissileDistance = missileDistance
+
+
+    print(f"{missileX:8.1f} metres downrange" )
+    print(f"{missileAlt:8.1f} metres in altitude")
+    print(f"{missileDistance:8.1f} metres from target",)
+    if missileDistance > 50:
+        print("\033[F\033[F\033[F", end='')
+    sleep(0.01)
+    continue
+
+print("Missile has proxy fused")

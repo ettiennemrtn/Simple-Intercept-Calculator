@@ -1,0 +1,15 @@
+{
+  "blufor": {
+    "speed_mps": 300,
+    "altitude_m": 1000,
+    "x_position_m": 0
+  },
+  "redfor": {
+    "speed_mps": 300,
+    "altitude_m": 10000,
+    "x_position_m": 30000
+  },
+  "missile": {
+    "speed_mps": 900
+  }
+}
