@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 from time import sleep
 import json
 
@@ -11,9 +12,10 @@ prefs = int(input("Enter 1 to open a JSON or 2 to enter raw data:"))
 
 if prefs == 1:
         #ask for file input
+    filedir = Path(__file__).parent
     file = input('Input file name:')
     if len(file) < 1:
-        file = 'dataDefault.json'
+        file = filedir / 'dataDefault.json'
     try:
         fileRead = open(file, 'r')
     except:
