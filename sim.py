@@ -2,7 +2,8 @@ import math
 from pathlib import Path
 from time import sleep
 import json
-
+import matplotlib.pyplot as plt
+import numpy as np
     #initialise world boundaries
 canvasY = 30000
 canvasX = 40000
@@ -80,6 +81,16 @@ if prefs == 2:
     except:
         print("missile's speed must be a number")
 
+
+    #plotting
+count = 0
+x = np.array([bluforXInit])
+y = np.array([bluforAltInit])
+redX = np.array([redforXInit])
+redY = np.array([redforAltInit])
+bluX = np.array([bluforXInit])
+bluY = np.array([bluforAltInit])
+
     #flight
 redforAlt = redforAltInit
 bluforAlt = bluforAltInit
@@ -118,9 +129,12 @@ while missileDistance > 50:
     missileAlt = missileAlt + (missileV * uY * 0.01)
     missileDistance = missileCalc()
 
+    bluforX = bluforX + (bluforV * 0.01)
+
 
 
     if oldMissileDistance < missileDistance:
+        print("cls")
         print("Missile has lost lock")
         end()
     oldMissileDistance = missileDistance
@@ -131,7 +145,22 @@ while missileDistance > 50:
     print(f"{missileDistance:8.1f} metres from target",)
     if missileDistance > 50:
         print("\033[F\033[F\033[F", end='')
+        count += 1
+    if count % 10 == 0:
+        x = np.append(x, missileX)
+        y = np.append(y, missileAlt)
+        redX = np.append(redX, redforX)
+        redY = np.append(redY, redforAlt)
+        bluX = np.append(bluX, bluforX)
+        bluY = np.append(bluY, bluforAlt)
+    time = count / 100
+
     sleep(0.01)
     continue
 
 print("Missile has proxy fused")
+print(time, "seconds of flight time")
+plt.plot(x, y)
+plt.plot(redX, redY)
+plt.plot(bluX, bluY)
+plt.show()
