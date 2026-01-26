@@ -1,4 +1,5 @@
 import math
+import os
 from pathlib import Path
 from time import sleep
 import json
@@ -82,14 +83,6 @@ if prefs == 2:
         print("missile's speed must be a number")
 
 
-    #plotting
-count = 0
-x = np.array([bluforXInit])
-y = np.array([bluforAltInit])
-redX = np.array([redforXInit])
-redY = np.array([redforAltInit])
-bluX = np.array([bluforXInit])
-bluY = np.array([bluforAltInit])
 
     #flight
 redforAlt = redforAltInit
@@ -117,11 +110,39 @@ def missileCalc():
     missileDistance = math.hypot(dx, dy)
     return missileDistance
 
+    #inertia
+def missileInertia():
+    if count > 500:
+        missileVNew = missileV * 0.99985
+        return missileVNew
+    else:
+        return missileV        
+
+    #plotting
+count = 0
+x = np.array([bluforXInit])
+y = np.array([bluforAltInit])
+redX = np.array([redforXInit])
+redY = np.array([redforAltInit])
+bluX = np.array([bluforXInit])
+bluY = np.array([bluforAltInit])
+
+plt.ion()
+fig, ax = plt.subplots()
+ax.set_xlim(0, canvasX)
+ax.set_ylim(0, canvasY)
+missileGraph, = ax.plot(x, y, 'c')
+redforGraph, = ax.plot(redX, redY, 'r')
+bluforGraph, = ax.plot(bluX, bluY, 'b')
+ax.set_xlabel('Downrange (m)')
+ax.set_ylabel('Altitude (m)')
+plt.legend(['Missile', 'Redfor', 'Blufor'])
 
     #missile flight
 oldMissileDistance = missileDistance
 while missileDistance > 50:
-
+    count += 1
+    missileV = missileInertia()
     uX = (redforX - missileX) / missileDistance
     uY = (redforAlt - missileAlt) / missileDistance
     redforX = redforX - (redforV * 0.01)
@@ -134,18 +155,15 @@ while missileDistance > 50:
 
 
     if oldMissileDistance < missileDistance:
-        print("cls")
         print("Missile has lost lock")
         end()
     oldMissileDistance = missileDistance
-
-
-    print(f"{missileX:8.1f} metres downrange" )
-    print(f"{missileAlt:8.1f} metres in altitude")
-    print(f"{missileDistance:8.1f} metres from target",)
-    if missileDistance > 50:
-        print("\033[F\033[F\033[F", end='')
-        count += 1
+    if count % 10 == 0:
+        print(f"{count/100} S"
+              f"\n\n{missileX:8.1f} m downrange\n"
+              f"{missileAlt:8.1f} m altitude\n"
+              f"{missileDistance:8.1f} m from target\n"
+              f"{missileV:8.1f} m/s")
     if count % 10 == 0:
         x = np.append(x, missileX)
         y = np.append(y, missileAlt)
@@ -153,14 +171,18 @@ while missileDistance > 50:
         redY = np.append(redY, redforAlt)
         bluX = np.append(bluX, bluforX)
         bluY = np.append(bluY, bluforAlt)
+        
+        missileGraph.set_data(x, y)
+        redforGraph.set_data(redX, redY)
+        bluforGraph.set_data(bluX, bluY)
+        fig.canvas.draw()
+        fig.canvas.flush_events()
     time = count / 100
 
-    sleep(0.01)
+    sleep(0.0)
     continue
 
 print("Missile has proxy fused")
 print(time, "seconds of flight time")
-plt.plot(x, y)
-plt.plot(redX, redY)
-plt.plot(bluX, bluY)
+plt.ioff()
 plt.show()
