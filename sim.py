@@ -25,11 +25,11 @@ if prefs == 1:
         exit()
     data = json.load(fileRead)
     redforV = float(data['redfor']['speed_mps'])
-    redforAltInit = float(data['redfor']['altitude_m'])
+    redforYInit = float(data['redfor']['altitude_m'])
     redforXInit = float(data['redfor']['x_position_m'])
 
     bluforV = float(data['blufor']['speed_mps'])
-    bluforAltInit = float(data['blufor']['altitude_m'])
+    bluforYInit = float(data['blufor']['altitude_m'])
     bluforXInit = float(data['blufor']['x_position_m'])
 
     missileV = float(data['missile']['speed_mps'])
@@ -41,11 +41,11 @@ if prefs == 2:
     except:
         print("redfor's speed must be a number.")
 
-    redforAltInit = input("input redfor's altitude in metres:")
-    try: redforAltInit = float(redforAltInit)
+    redforYInit = input("input redfor's altitude in metres")
+    try: redforYInit = float(redforYInit)
     except:
         print("redfor's altitude must be a number.")
-    if redforAltInit > 30000 or redforAltInit < 0:
+    if redforYInit > 30000 or redforYInit < 0:
         print("redfor's alt must be between 0 and 30000 metres.")
 
     redforXInit = input("input redfor's X position in metres:")
@@ -62,11 +62,11 @@ if prefs == 2:
     except:
         print("blufor's speed must be a number.")
 
-    bluforAltInit = input("input blufor's altitude in metres:")
-    try: bluforAltInit = float(bluforAltInit)
+    bluforYInit = input("input blufor's altitude in metres:")
+    try: bluforYInit = float(bluforYInit)
     except:
         print("blufor's altitude must be a number.")
-    if bluforAltInit > 30000 or bluforAltInit < 0:
+    if bluforYInit > 30000 or bluforYInit < 0:
         print("bluefor's altitude must be between 0 and 30000 metres.")
 
     bluforXInit = input("input blufor's X position in metres:")
@@ -85,28 +85,32 @@ if prefs == 2:
 
 
     #flight
-redforAlt = redforAltInit
-bluforAlt = bluforAltInit
+redforY = redforYInit
+bluforAlt = bluforYInit
 redforX = redforXInit
 bluforX = bluforXInit
 
-missileAlt = bluforAlt
+missileY = bluforAlt
 missileX = bluforX
 
 
 dx = redforX - missileX
-dy = redforAlt - missileAlt
+dy = redforY - missileY
 missileDistance = math.hypot(dx, dy)
+
+oldUX = None
+oldUY = None
+missileLaunchV = None
 
 def distanceCalc():
     dx = redforX - bluforX
-    dy = redforAlt - bluforAlt
+    dy = redforY - bluforAlt
     airDistance = math.hypot(dx, dy)
     return airDistance
 
 def missileCalc():
     dx = redforX - missileX
-    dy = redforAlt - missileAlt
+    dy = redforY - missileY
     missileDistance = math.hypot(dx, dy)
     return missileDistance
 
@@ -116,16 +120,49 @@ def missileInertia():
         missileVNew = missileV * 0.99985
         return missileVNew
     else:
-        return missileV        
+        return missileV      
+
+    #missile position
+def missilePos():
+    global missileX, missileY, redforX, redforY, bluforV, oldUX, oldUY, missileLaunchV, count
+    uX = (redforX - missileX) / missileDistance
+    uY = (redforY - missileY) / missileDistance
+    if oldUX is None and oldUY is None:
+        oldUX = uX
+        oldUY = uY
+
+    dUX = uX - oldUX
+    dUY = uY - oldUY
+    if dUX > 0.001 or dUX < -0.001:
+        uX = oldUX + 0.001 * (1 if dUX > 0 else -1)
+    if dUY > 0.001 or dUY < -0.001:
+        uY = oldUY + 0.001 * (1 if dUY > 0 else -1)
+    if count < 500:
+        launchDelta = missileV - bluforV
+        if missileLaunchV is None:
+            missileLaunchV = bluforV
+            uX = 1
+            uY = 0
+        missileLaunchV = missileLaunchV + (launchDelta * 0.002)
+        missileX = missileX + (missileLaunchV * uX * 0.01)
+        missileY = missileY + (missileLaunchV * uY * 0.01)
+    
+    else:
+        missileX = missileX + (missileV * uX * 0.01)
+        missileY = missileY + (missileV * uY * 0.01)
+    oldUX = uX
+    oldUY = uY
+    missileXY = [missileX, missileY, oldUX, oldUY]
+    return missileXY
 
     #plotting
 count = 0
 x = np.array([bluforXInit])
-y = np.array([bluforAltInit])
+y = np.array([bluforYInit])
 redX = np.array([redforXInit])
-redY = np.array([redforAltInit])
+redY = np.array([redforYInit])
 bluX = np.array([bluforXInit])
-bluY = np.array([bluforAltInit])
+bluY = np.array([bluforYInit])
 
 plt.ion()
 fig, ax = plt.subplots()
@@ -143,32 +180,30 @@ oldMissileDistance = missileDistance
 while missileDistance > 50:
     count += 1
     missileV = missileInertia()
-    uX = (redforX - missileX) / missileDistance
-    uY = (redforAlt - missileAlt) / missileDistance
     redforX = redforX - (redforV * 0.01)
-    missileX = missileX + (missileV * uX * 0.01)
-    missileAlt = missileAlt + (missileV * uY * 0.01)
+    missileXY = missilePos()
+    missileX = missileXY[0]
+    missileY = missileXY[1]
+
     missileDistance = missileCalc()
-
     bluforX = bluforX + (bluforV * 0.01)
-
-
 
     if oldMissileDistance < missileDistance:
         print("Missile has lost lock")
-        end()
+        lostLock = 1
+        break
     oldMissileDistance = missileDistance
     if count % 10 == 0:
         print(f"{count/100} S"
               f"\n\n{missileX:8.1f} m downrange\n"
-              f"{missileAlt:8.1f} m altitude\n"
+              f"{missileY:8.1f} m altitude\n"
               f"{missileDistance:8.1f} m from target\n"
               f"{missileV:8.1f} m/s")
     if count % 10 == 0:
         x = np.append(x, missileX)
-        y = np.append(y, missileAlt)
+        y = np.append(y, missileY)
         redX = np.append(redX, redforX)
-        redY = np.append(redY, redforAlt)
+        redY = np.append(redY, redforY)
         bluX = np.append(bluX, bluforX)
         bluY = np.append(bluY, bluforAlt)
         
@@ -181,8 +216,11 @@ while missileDistance > 50:
 
     sleep(0.0)
     continue
-
-print("Missile has proxy fused")
-print(time, "seconds of flight time")
+if lostLock == 0:
+    print("Missile has proxy fused")
+try:
+    print(time, "seconds of flight time")
+except:
+    print("Flight time could not be calculated.")
 plt.ioff()
 plt.show()
