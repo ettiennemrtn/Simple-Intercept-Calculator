@@ -101,6 +101,9 @@ missileDistance = math.hypot(dx, dy)
 oldUX = None
 oldUY = None
 missileLaunchV = None
+lostLock = 0
+lockBreakCount = 0
+launchTime = 0
 
 def distanceCalc():
     dx = redforX - bluforX
@@ -122,10 +125,44 @@ def missileInertia():
     else:
         return missileV      
 
-    #missile position
-def missilePos():
+    #missile position direct guidance
+def missilePosDirect():
     global missileX, missileY, redforX, redforY, bluforV, oldUX, oldUY, missileLaunchV, count
     uX = (redforX - missileX) / missileDistance
+    uY = (redforY - missileY) / missileDistance
+    if oldUX is None and oldUY is None:
+        oldUX = uX
+        oldUY = uY
+
+    dUX = uX - oldUX
+    dUY = uY - oldUY
+    if dUX > 0.005 or dUX < -0.005:
+        uX = oldUX + 0.005 * (1 if dUX > 0 else -1)
+    if dUY > 0.005 or dUY < -0.005:
+        uY = oldUY + 0.005 * (1 if dUY > 0 else -1)
+    if count < 500:
+        launchDelta = missileV - bluforV
+        if missileLaunchV is None:
+            missileLaunchV = bluforV
+            uX = 1
+            uY = 0
+        missileLaunchV = missileLaunchV + (launchDelta * 0.002)
+        missileX = missileX + (missileLaunchV * uX * 0.01)
+        missileY = missileY + (missileLaunchV * uY * 0.01)
+    
+    else:
+        missileX = missileX + (missileV * uX * 0.01)
+        missileY = missileY + (missileV * uY * 0.01)
+    oldUX = uX
+    oldUY = uY
+    missileXY = [missileX, missileY, oldUX, oldUY]
+    return missileXY
+
+    #missile position lead guidance
+def missilePosLead():
+    global missileX, missileY, redforX, redforY, bluforV, oldUX, oldUY, missileLaunchV, count, redforLeadX, launchTime
+    leadCalc()
+    uX = (redforLeadX - missileX) / missileDistance
     uY = (redforY - missileY) / missileDistance
     if oldUX is None and oldUY is None:
         oldUX = uX
@@ -153,8 +190,17 @@ def missilePos():
     oldUX = uX
     oldUY = uY
     missileXY = [missileX, missileY, oldUX, oldUY]
+    launchTime += 1
     return missileXY
 
+    #leadCalc
+def leadCalc():
+    global redforX, redforY, missileV, missileX, missileY, redforLeadX, launchTime, timeToTarget
+    dx = redforX - missileX
+    dy = redforY - missileY
+    timeToTarget = math.hypot(dx, dy) / missileV
+    redforLeadX = redforX - (redforV * timeToTarget)
+    return redforLeadX
     #plotting
 count = 0
 x = np.array([bluforXInit])
@@ -181,7 +227,7 @@ while missileDistance > 50:
     count += 1
     missileV = missileInertia()
     redforX = redforX - (redforV * 0.01)
-    missileXY = missilePos()
+    missileXY = missilePosLead()
     missileX = missileXY[0]
     missileY = missileXY[1]
 
@@ -189,16 +235,20 @@ while missileDistance > 50:
     bluforX = bluforX + (bluforV * 0.01)
 
     if oldMissileDistance < missileDistance:
-        print("Missile has lost lock")
-        lostLock = 1
-        break
+        lockBreakCount += 1
+        if lockBreakCount > 100:
+            print("Missile has lost lock")
+            lostLock = 1
+            break
     oldMissileDistance = missileDistance
     if count % 10 == 0:
         print(f"{count/100} S"
               f"\n\n{missileX:8.1f} m downrange\n"
               f"{missileY:8.1f} m altitude\n"
               f"{missileDistance:8.1f} m from target\n"
-              f"{missileV:8.1f} m/s")
+              f"{missileV:8.1f} m/s"
+              f"{(timeToTarget):8.1f} s"
+              f"{(launchTime/100):8.1f} s")
     if count % 10 == 0:
         x = np.append(x, missileX)
         y = np.append(y, missileY)
