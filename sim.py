@@ -8,21 +8,35 @@ import numpy as np
     #initialise world boundaries
 canvasY = 30000
 canvasX = 40000
-
+prefs = 0
+fileReadSuccessful = 0
     #ask input prefs
-prefs = int(input("Enter 1 to open a JSON or 2 to enter raw data:"))
-
-if prefs == 1:
-        #ask for file input
-    filedir = Path(__file__).parent
-    file = input('Input file name:')
-    if len(file) < 1:
-        file = filedir / 'dataDefault.json'
+while prefs != 1 and prefs != 2:
     try:
-        fileRead = open(file, 'r')
+        prefs = int(input("Enter 1 to open a JSON or 2 to enter raw data:"))
     except:
-        print("File opening failed")
-        exit()
+        print("Invalid input (ValueError), please enter 1 or 2.")
+        prefs = 0
+    if prefs != 1 and prefs != 2 and prefs != 0:
+        print("Invalid input, please enter 1 or 2.")
+        prefs = 0
+
+ #ask for file input
+if prefs == 1:
+    filedir = Path(__file__).parent
+    while fileReadSuccessful != 1:
+        fileInput = input('Input file name:')
+        if len(fileInput) < 1:
+          fileInput = 'dataDefault.json'
+        if not fileInput.endswith('.json'):
+            fileInput += '.json'
+        file = filedir / fileInput
+        try:
+           fileRead = open(file, 'r')
+           fileReadSuccessful = 1
+        except:
+           print(f"File opening {file} failed, please input a valid file name.")
+
     data = json.load(fileRead)
     redforV = float(data['redfor']['speed_mps'])
     redforYInit = float(data['redfor']['altitude_m'])
@@ -236,7 +250,7 @@ while missileDistance > 50:
 
     if oldMissileDistance < missileDistance:
         lockBreakCount += 1
-        if lockBreakCount > 100:
+        if lockBreakCount > 400:
             print("Missile has lost lock")
             lostLock = 1
             break
